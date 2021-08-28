@@ -7,14 +7,13 @@ type Lexer struct {
 	ch           byte // 現在操作中の文字
 }
 
-func New(input string) *Lexer {
+func NewLexer(input string) *Lexer {
 	l := &Lexer{
 		input:        input,
 		position:     0,
 		readPosition: 1,
 		ch:           input[0],
 	}
-
 	return l
 }
 
@@ -28,28 +27,79 @@ func (l *Lexer) readChar() {
 	l.readPosition += 1
 }
 
+func (l *Lexer) newToken(tokenType TokenType, ch byte) Token {
+	return Token{Type: tokenType, Literal: string(ch)}
+}
+
+func (l *Lexer) skipWhitespace() {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+		l.readChar()
+	}
+}
+
 func (l *Lexer) NextToken() Token {
 	var tok Token
-	newToken := func(tokenType TokenType, ch byte) Token {
-		return Token{Type: tokenType, Literal: string(ch)}
-	}
+	l.skipWhitespace()
 	switch l.ch {
 	case '=':
-		tok = newToken(ASSIGN, l.ch)
+		tok = l.newToken(ASSIGN, l.ch)
 	case ';':
-		tok = newToken(SEMICOLON, l.ch)
+		tok = l.newToken(SEMICOLON, l.ch)
 	case '(':
-		tok = newToken(L_PAREN, l.ch)
+		tok = l.newToken(L_PAREN, l.ch)
 	case ')':
-		tok = newToken(R_PAREN, l.ch)
+		tok = l.newToken(R_PAREN, l.ch)
 	case '{':
-		tok = newToken(L_BRACE, l.ch)
+		tok = l.newToken(L_BRACE, l.ch)
 	case '}':
-		tok = newToken(R_BRACE, l.ch)
-	case '0':
-		tok.Literal = ""
-		tok.Type = EOF
+		tok = l.newToken(R_BRACE, l.ch)
+	case ',':
+		tok = l.newToken(COMMA, l.ch)
+	case '+':
+		tok = l.newToken(PLUS, l.ch)
+	case 0:
+		tok = Token{Type: EOF, Literal: ""}
+	default:
+		if isLetter(l.ch) {
+			tok.Literal = l.readIdentifier()
+			tok.Type = LookupIdent(tok.Literal)
+			return tok
+		} else if isDigit(l.ch) {
+			tok.Literal = l.readNumber()
+			tok.Type = INT
+			return tok
+		} else {
+			tok = l.newToken(ILLEGAL, l.ch)
+		}
 	}
 	l.readChar()
 	return tok
+}
+
+func (l *Lexer) readNumber() string {
+	var number []rune
+	for isDigit(l.ch) {
+		number = append(number, rune(l.ch))
+		l.readChar()
+	}
+	return string(number)
+}
+
+func (l *Lexer) readIdentifier() string {
+	var ident []rune
+	// 文字(a-z, A-Z, _)が続く限り読み進める
+	for isLetter(l.ch) {
+		ident = append(ident, rune(l.ch))
+		l.readChar()
+	}
+	return string(ident)
+}
+
+func isLetter(ch byte) bool {
+	return 'a' <= ch && ch <= 'z' ||
+		'A' <= ch && ch <= 'Z' ||
+		ch == '_'
+}
+func isDigit(ch byte) bool {
+	return '0' <= ch && ch <= '9'
 }
