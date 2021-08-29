@@ -42,7 +42,18 @@ let add = fn(x, y) {
 };
 
 let result = add(five, ten);
-		`,
+!-/*5;
+5 < 10 >5;
+
+if (5 < 10) {
+	return true;
+} else {
+	return false;
+}
+
+10 == 10
+10 != 9
+`,
 			},
 			want: []Token{
 				{Type: LET, Literal: "let"},
@@ -81,6 +92,41 @@ let result = add(five, ten);
 				{Type: IDENT, Literal: "ten"},
 				{Type: R_PAREN, Literal: ")"},
 				{Type: SEMICOLON, Literal: ";"},
+				{Type: BANG, Literal: "!"},
+				{Type: MINUS, Literal: "-"},
+				{Type: SLASH, Literal: "/"},
+				{Type: ASTERISK, Literal: "*"},
+				{Type: INT, Literal: "5"},
+				{Type: SEMICOLON, Literal: ";"},
+				{Type: INT, Literal: "5"},
+				{Type: LT, Literal: "<"},
+				{Type: INT, Literal: "10"},
+				{Type: GT, Literal: ">"},
+				{Type: INT, Literal: "5"},
+				{Type: SEMICOLON, Literal: ";"},
+				{Type: IF, Literal: "if"},
+				{Type: L_PAREN, Literal: "("},
+				{Type: INT, Literal: "5"},
+				{Type: LT, Literal: "<"},
+				{Type: INT, Literal: "10"},
+				{Type: R_PAREN, Literal: ")"},
+				{Type: L_BRACE, Literal: "{"},
+				{Type: RETURN, Literal: "return"},
+				{Type: TRUE, Literal: "true"},
+				{Type: SEMICOLON, Literal: ";"},
+				{Type: R_BRACE, Literal: "}"},
+				{Type: ELSE, Literal: "else"},
+				{Type: L_BRACE, Literal: "{"},
+				{Type: RETURN, Literal: "return"},
+				{Type: FALSE, Literal: "false"},
+				{Type: SEMICOLON, Literal: ";"},
+				{Type: R_BRACE, Literal: "}"},
+				{Type: INT, Literal: "10"},
+				{Type: EQ, Literal: "=="},
+				{Type: INT, Literal: "10"},
+				{Type: INT, Literal: "10"},
+				{Type: NOT_EQ, Literal: "!="},
+				{Type: INT, Literal: "9"},
 				{Type: EOF, Literal: ""},
 			},
 		},
