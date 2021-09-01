@@ -49,6 +49,10 @@ func (ls *LetStatement) TokenLiteral() string {
 	return ls.Token.Literal
 }
 
+func (ls *LetStatement) String() string {
+	return ""
+}
+
 type Identifier struct {
 	Token Token // IDENT トークン
 	Value string

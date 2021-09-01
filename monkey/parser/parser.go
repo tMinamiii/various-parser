@@ -21,5 +21,60 @@ func (p *Parser) nextToken() {
 }
 
 func (p *Parser) ParseProgram() *Program {
-	return nil
+	program := &Program{}
+	program.Statements = []Statement{}
+
+	for p.curToken.Type != EOF {
+		stmt := p.parseStatement()
+		if stmt != nil {
+			program.Statements = append(program.Statements, stmt)
+		}
+		p.nextToken()
+	}
+	return program
+}
+
+func (p *Parser) parseStatement() Statement {
+	switch p.curToken.Type {
+	case LET:
+		return p.parseLetStatement()
+	default:
+		return nil
+	}
+
+}
+
+func (p *Parser) parseLetStatement() *LetStatement {
+	stmt := &LetStatement{Token: p.curToken}
+	if !p.expectPeek(IDENT) {
+		return nil
+	}
+	stmt.Name = &Identifier{Token: p.curToken, Value: p.curToken.Literal}
+
+	if !p.expectPeek(ASSIGN) {
+		return nil
+	}
+
+	//TODO: セミコロンに遭遇するまで式を読み飛ばしてしまっている
+	for !p.curTokenIs(SEMICOLON) {
+		p.nextToken()
+	}
+
+	return stmt
+}
+
+func (p *Parser) curTokenIs(t TokenType) bool {
+	return p.curToken.Type == t
+}
+
+func (p *Parser) peekTokenIs(t TokenType) bool {
+	return p.peekToken.Type == t
+}
+
+func (p *Parser) expectPeek(t TokenType) bool {
+	if p.peekTokenIs(t) {
+		p.nextToken()
+		return true
+	}
+	return false
 }
