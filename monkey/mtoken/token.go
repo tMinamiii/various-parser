@@ -1,4 +1,4 @@
-package monkey
+package mtoken
 
 type TokenType string
 

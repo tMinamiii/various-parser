@@ -1,7 +1,9 @@
-package monkey
+package ast
+
+import "github.com/tMinamiii/various-parser/monkey/mtoken"
 
 type ExpressionStatement struct {
-	Token      Token // 式の最初のトークン
+	Token      mtoken.Token // 式の最初のトークン
 	Expression Expression
 }
 
@@ -38,7 +40,7 @@ func (p *Program) TokenLiteral() string {
 }
 
 type LetStatement struct {
-	Token Token // LET トークン
+	Token mtoken.Token // LET トークン
 	Name  *Identifier
 	Value Expression
 }
@@ -53,8 +55,19 @@ func (ls *LetStatement) String() string {
 	return ""
 }
 
+type ReturnStatement struct {
+	Token       mtoken.Token
+	ReturnValue Expression
+}
+
+func (rs *ReturnStatement) statementNode()       {}
+func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
+func (ls *ReturnStatement) String() string {
+	return ""
+}
+
 type Identifier struct {
-	Token Token // IDENT トークン
+	Token mtoken.Token // IDENT トークン
 	Value string
 }
 

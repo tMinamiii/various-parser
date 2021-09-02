@@ -1,16 +1,46 @@
-package monkey
+package parser
 
 import (
 	"testing"
+
+	"github.com/tMinamiii/various-parser/monkey/ast"
+	"github.com/tMinamiii/various-parser/monkey/lexer"
 )
 
+func TestReturnStatements(t *testing.T) {
+	input := `
+return 5;
+return 10;
+return 993322;
+`
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 3 {
+		t.Fatalf("program.Statements does not contain 3 statements. got=%d", len(program.Statements))
+	}
+
+	for _, stmt := range program.Statements {
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("stmt not *ast.returnStatement. got=%T", stmt)
+			continue
+		}
+		if returnStmt.TokenLiteral() != "return" {
+			t.Errorf("returnStmt.TokenLiteral not 'return', got %q", returnStmt.TokenLiteral())
+		}
+	}
+}
 func TestLetStatements(t *testing.T) {
 	input := `
 let x = 5;
 let y = 10;
 let = 838383;
 `
-	l := NewLexer(input)
+	l := lexer.NewLexer(input)
 	p := NewParser(l)
 
 	program := p.ParseProgram()
@@ -51,13 +81,13 @@ func checkParserErrors(t *testing.T, p *Parser) {
 	t.FailNow()
 }
 
-func testLetStatement(t *testing.T, s Statement, name string) bool {
+func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	if s.TokenLiteral() != "let" {
 		t.Errorf("s.TokenLiteral not 'let'. got=%q", s.TokenLiteral())
 		return false
 	}
 
-	letStmt, ok := s.(*LetStatement)
+	letStmt, ok := s.(*ast.LetStatement)
 	if !ok {
 		t.Errorf("s not *ast.LetStatement. got=%T", s)
 		return false

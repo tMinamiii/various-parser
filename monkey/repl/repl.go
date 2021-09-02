@@ -1,9 +1,12 @@
-package monkey
+package repl
 
 import (
 	"bufio"
 	"fmt"
 	"io"
+
+	"github.com/tMinamiii/various-parser/monkey/lexer"
+	"github.com/tMinamiii/various-parser/monkey/mtoken"
 )
 
 const PROMPT = ">> "
@@ -18,9 +21,9 @@ func StartREPL(in io.Reader, out io.Writer) {
 		}
 
 		line := scanner.Text()
-		l := NewLexer(line)
+		l := lexer.NewLexer(line)
 
-		for tok := l.NextToken(); tok.Type != EOF; tok = l.NextToken() {
+		for tok := l.NextToken(); tok.Type != mtoken.EOF; tok = l.NextToken() {
 			fmt.Printf("%+v\n", tok)
 		}
 	}

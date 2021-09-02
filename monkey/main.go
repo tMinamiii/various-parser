@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/user"
 
-	monkey "github.com/tMinamiii/various-parser/monkey/parser"
+	"github.com/tMinamiii/various-parser/monkey/repl"
 )
 
 func main() {
@@ -16,5 +16,5 @@ func main() {
 
 	fmt.Printf("Hello %s! This is the Monkey programming language!\n", user.Username)
 	fmt.Printf("Feel free to type in commands\n")
-	monkey.StartREPL(os.Stdin, os.Stdout)
+	repl.StartREPL(os.Stdin, os.Stdout)
 }
