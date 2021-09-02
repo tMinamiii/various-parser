@@ -1,18 +1,37 @@
 package monkey
 
+import "fmt"
+
+// 5 + 5 * 10のように、「+」の後に別の演算子式が続く可能性があ
+// るからだ。これには後ほど取り組み、式の構文解析について詳しく見ていくことにする。これがこの構
+// 文解析器の中でおそらく最も複雑で、最も美しい部分だ
 type Parser struct {
 	l *Lexer
 
+	errors    []string
 	curToken  Token
 	peekToken Token
 }
 
 func NewParser(l *Lexer) *Parser {
-	p := &Parser{l: l}
+	p := &Parser{
+		l:      l,
+		errors: []string{},
+	}
 	// 2つトークンを読み込み。curTokenとpeekTokenの両方がセット
-	p.curToken = p.l.NextToken()
-	p.peekToken = p.l.NextToken()
+	p.nextToken()
+	p.nextToken()
 	return p
+}
+
+func (p *Parser) Errors() []string {
+	return p.errors
+}
+
+// 次のトークンが期待しているものでなければp.errorsにメッセージを詰める
+func (p *Parser) peekError(t TokenType) {
+	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
+	p.errors = append(p.errors, msg)
 }
 
 func (p *Parser) nextToken() {
@@ -71,10 +90,13 @@ func (p *Parser) peekTokenIs(t TokenType) bool {
 	return p.peekToken.Type == t
 }
 
+// 後続するトークンにアサーションを設けつつトークンを進める
 func (p *Parser) expectPeek(t TokenType) bool {
 	if p.peekTokenIs(t) {
 		p.nextToken()
 		return true
 	}
+	// 次のトークンが期待に合わない場合に自動的にエラーを追加するようにできる
+	p.peekError(t)
 	return false
 }
