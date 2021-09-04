@@ -56,6 +56,9 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.prefixParseFns = make(map[mtoken.TokenType]prefixParseFn)
 	p.registerPrefix(mtoken.IDENT, p.parseIdentifier)
 	p.registerPrefix(mtoken.INT, p.parseIntegerLiteral)
+	p.registerPrefix(mtoken.BANG, p.parsePrefixExpression)
+	p.registerPrefix(mtoken.MINUS, p.parsePrefixExpression)
+
 	// 2つトークンを読み込み。curTokenとpeekTokenの両方がセット
 	p.nextToken()
 	p.nextToken()
@@ -170,6 +173,10 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 
 	return stmt
 }
+func (p *Parser) noPrefixParseFnError(t mtoken.TokenType) {
+	msg := fmt.Sprintf("no prefix parse function for %s found", t)
+	p.errors = append(p.errors, msg)
+}
 
 // p.curToken.Typeの前置に関連付けられた構文解析関数があるかを確認している
 // もし存在していれば、その構文解析関数を呼び出し、その結果を返す。
@@ -179,6 +186,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		leftExp := prefix()
 		return leftExp
 	}
+	p.noPrefixParseFnError(p.curToken.Type)
 	return nil
 }
 
@@ -203,4 +211,17 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	}
 	lit.Value = value
 	return lit
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+	}
+
+	p.nextToken()
+
+	expression.Right = p.parseExpression(PREFIX)
+
+	return expression
 }
