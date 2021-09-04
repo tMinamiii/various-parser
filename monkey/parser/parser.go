@@ -8,6 +8,7 @@ package parser
 // * これらの関数は、トークンが前置で出現したか中置か出現したかによって使い分けられる。
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/tMinamiii/various-parser/monkey/ast"
 	"github.com/tMinamiii/various-parser/monkey/lexer"
@@ -54,6 +55,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	// マップの初期化し構文解析器を登録する
 	p.prefixParseFns = make(map[mtoken.TokenType]prefixParseFn)
 	p.registerPrefix(mtoken.IDENT, p.parseIdentifier)
+	p.registerPrefix(mtoken.INT, p.parseIntegerLiteral)
 	// 2つトークンを読み込み。curTokenとpeekTokenの両方がセット
 	p.nextToken()
 	p.nextToken()
@@ -148,6 +150,7 @@ func (p *Parser) expectPeek(t mtoken.TokenType) bool {
 	return false
 }
 
+// registerPrefix 前置トークンに対応するパーサーをprefixParseFns格納していく
 func (p *Parser) registerPrefix(tokenType mtoken.TokenType, fn prefixParseFn) {
 	p.prefixParseFns[tokenType] = fn
 }
@@ -186,4 +189,18 @@ func (p *Parser) parseIdentifier() ast.Expression {
 	// 構文解析関数に関連付けられたトークンがcurTokenにセットされている状態で動作を開始する。
 	// そして、この関数の処理対象である式の一番最後のトークンがcurTokenにセットされた状態になるまで進んで終了する。
 	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	lit := &ast.IntegerLiteral{Token: p.curToken}
+
+	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+	if err != nil {
+		// int64に変換できない場合
+		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	lit.Value = value
+	return lit
 }
