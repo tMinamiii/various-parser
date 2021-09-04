@@ -1,7 +1,17 @@
 package ast
 
-import "github.com/tMinamiii/various-parser/monkey/mtoken"
+import (
+	"bytes"
 
+	"github.com/tMinamiii/various-parser/monkey/mtoken"
+)
+
+// ExpressionStatement 型には2つのフィールドがある。
+// Tokenフィールドは全てのノードにあるものだ。
+// Expressionフィールドは式を保持する。
+// これで、ast.ExpressionStatementはast.Statementインターフェイスを満たす。
+// したがって、それをast.ProgramのStatementsスライスに追加できる。
+// 以上がast.ExpressionStatementを追加する理由の全容だ。
 type ExpressionStatement struct {
 	Token      mtoken.Token // 式の最初のトークン
 	Expression Expression
@@ -9,8 +19,15 @@ type ExpressionStatement struct {
 
 func (es *ExpressionStatement) statementNode() {}
 
-func (es *ExpressionStatement) Tokenliteral() string {
+func (es *ExpressionStatement) TokenLiteral() string {
 	return es.Token.Literal
+}
+
+func (es *ExpressionStatement) String() string {
+	if es.Expression != nil {
+		return es.Expression.String()
+	}
+	return ""
 }
 
 type Node interface {
@@ -39,6 +56,22 @@ func (p *Program) TokenLiteral() string {
 	return ""
 }
 
+// String Java感ある
+// 文字列リテラル（ダブルクォーテーション（"）で囲んだ文字列）を結合します。
+// 単純に結合するには、＋演算子を使用します。
+// ただし、＋演算子で結合すると、結合するたびに文字列オブジェクトが生成されます。
+// bytes.Bufferを使用すると、文字列はバッファ内に保持され、無駄に文字列オブジェクトが生成されることを防ぎます。
+// 結合が1回なら「+」 それ以上はSprintf or bytes.Buffer
+func (p *Program) String() string {
+	var out bytes.Buffer
+
+	for _, s := range p.Statements {
+		out.WriteString(s.String())
+	}
+
+	return out.String()
+}
+
 type LetStatement struct {
 	Token mtoken.Token // LET トークン
 	Name  *Identifier
@@ -52,7 +85,18 @@ func (ls *LetStatement) TokenLiteral() string {
 }
 
 func (ls *LetStatement) String() string {
-	return ""
+	var out bytes.Buffer
+
+	out.WriteString(ls.TokenLiteral() + "")
+	out.WriteString(ls.Name.String())
+	out.WriteString(" = ")
+
+	if ls.Value != nil {
+		out.WriteString(ls.Value.String())
+	}
+
+	out.WriteString(";")
+	return out.String()
 }
 
 type ReturnStatement struct {
@@ -62,8 +106,18 @@ type ReturnStatement struct {
 
 func (rs *ReturnStatement) statementNode()       {}
 func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
-func (ls *ReturnStatement) String() string {
-	return ""
+func (rs *ReturnStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(rs.TokenLiteral() + " ")
+
+	if rs.ReturnValue != nil {
+		out.WriteString(rs.ReturnValue.String())
+	}
+
+	out.WriteString(";")
+
+	return out.String()
 }
 
 type Identifier struct {
@@ -73,3 +127,4 @@ type Identifier struct {
 
 func (i *Identifier) expressionNode()      {}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
+func (i *Identifier) String() string       { return i.Value }

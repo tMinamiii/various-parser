@@ -1,11 +1,34 @@
 package parser
 
+// Pratt構文解析器の考え方で重要なのは、
+// * トークンタイプごとに構文解析関数（Prattは「semantic code」と呼ぶ）を関連付けることだ。
+// * あるトークンタイプに遭遇するたびに、対応する構文解析関数が呼ばれる。
+// * この関数は適切な式を構文解析し、その式を表現するASTノードを返す。
+// * トークンタイプごとに、最大2つの構文解析関数が関連付けられる。
+// * これらの関数は、トークンが前置で出現したか中置か出現したかによって使い分けられる。
 import (
 	"fmt"
 
 	"github.com/tMinamiii/various-parser/monkey/ast"
 	"github.com/tMinamiii/various-parser/monkey/lexer"
 	"github.com/tMinamiii/various-parser/monkey/mtoken"
+)
+
+// LOWESTが優先度MIN CALLが優先度MAX
+const (
+	_ int = iota // 0をとばす
+	LOWEST
+	EQUALS      // ==
+	LESSGREATER // > or <
+	SUM         // +
+	PRODUCT     // *
+	PREFIX      // -X または !X
+	CALL        // myFunction(X)
+)
+
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
 )
 
 // 5 + 5 * 10のように、「+」の後に別の演算子式が続く可能性があ
@@ -17,6 +40,9 @@ type Parser struct {
 	errors    []string
 	curToken  mtoken.Token
 	peekToken mtoken.Token
+
+	prefixParseFns map[mtoken.TokenType]prefixParseFn // トークンタイプが前置で出現した場合
+	infixParseFns  map[mtoken.TokenType]infixParseFn  // トークンタイプが中置で出現した場合
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
@@ -24,6 +50,10 @@ func NewParser(l *lexer.Lexer) *Parser {
 		l:      l,
 		errors: []string{},
 	}
+
+	// マップの初期化し構文解析器を登録する
+	p.prefixParseFns = make(map[mtoken.TokenType]prefixParseFn)
+	p.registerPrefix(mtoken.IDENT, p.parseIdentifier)
 	// 2つトークンを読み込み。curTokenとpeekTokenの両方がセット
 	p.nextToken()
 	p.nextToken()
@@ -51,9 +81,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 
 	for p.curToken.Type != mtoken.EOF {
 		stmt := p.parseStatement()
-		if stmt != nil {
-			program.Statements = append(program.Statements, stmt)
-		}
+		program.Statements = append(program.Statements, stmt)
 		p.nextToken()
 	}
 	return program
@@ -66,7 +94,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	case mtoken.RETURN:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 
 }
@@ -118,4 +146,44 @@ func (p *Parser) expectPeek(t mtoken.TokenType) bool {
 	// 次のトークンが期待に合わない場合に自動的にエラーを追加するようにできる
 	p.peekError(t)
 	return false
+}
+
+func (p *Parser) registerPrefix(tokenType mtoken.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
+func (p *Parser) registerInfix(tokenType mtoken.TokenType, fn infixParseFn) {
+	p.infixParseFns[tokenType] = fn
+}
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{Token: p.curToken}
+
+	stmt.Expression = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(mtoken.SEMICOLON) {
+		p.nextToken()
+	}
+
+	return stmt
+}
+
+// p.curToken.Typeの前置に関連付けられた構文解析関数があるかを確認している
+// もし存在していれば、その構文解析関数を呼び出し、その結果を返す。
+// そうでなければnilを返す
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	if prefix, ok := p.prefixParseFns[p.curToken.Type]; ok {
+		leftExp := prefix()
+		return leftExp
+	}
+	return nil
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	// 単に*ast.Identifierを返すだけ
+	// ただし、現在のトークンをTokenフィールドに、トークンのリテラル値をValueフィールド格納する。
+	// トークンはすすめない(nextTokenは呼びださない)
+	// 構文解析関数に関連付けられたトークンがcurTokenにセットされている状態で動作を開始する。
+	// そして、この関数の処理対象である式の一番最後のトークンがcurTokenにセットされた状態になるまで進んで終了する。
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 }
