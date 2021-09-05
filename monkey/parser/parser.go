@@ -32,6 +32,18 @@ type (
 	infixParseFn  func(ast.Expression) ast.Expression
 )
 
+// precedence 優先順位を意味する
+var precedence = map[mtoken.TokenType]int{
+	mtoken.EQ:       EQUALS,
+	mtoken.NOT_EQ:   EQUALS,
+	mtoken.LT:       LESSGREATER,
+	mtoken.GT:       LESSGREATER,
+	mtoken.PLUS:     SUM,
+	mtoken.MINUS:    SUM,
+	mtoken.SLASH:    PRODUCT,
+	mtoken.ASTERISK: PRODUCT,
+}
+
 // 5 + 5 * 10のように、「+」の後に別の演算子式が続く可能性があ
 // るからだ。これには後ほど取り組み、式の構文解析について詳しく見ていくことにする。これがこの構
 // 文解析器の中でおそらく最も複雑で、最も美しい部分だ
@@ -59,6 +71,16 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.registerPrefix(mtoken.BANG, p.parsePrefixExpression)
 	p.registerPrefix(mtoken.MINUS, p.parsePrefixExpression)
 
+	p.infixParseFns = make(map[mtoken.TokenType]infixParseFn)
+	p.registerInfix(mtoken.PLUS, p.parseInfixExpression)
+	p.registerInfix(mtoken.MINUS, p.parseInfixExpression)
+	p.registerInfix(mtoken.SLASH, p.parseInfixExpression)
+	p.registerInfix(mtoken.ASTERISK, p.parseInfixExpression)
+	p.registerInfix(mtoken.EQ, p.parseInfixExpression)
+	p.registerInfix(mtoken.NOT_EQ, p.parseInfixExpression)
+	p.registerInfix(mtoken.LT, p.parseInfixExpression)
+	p.registerInfix(mtoken.GT, p.parseInfixExpression)
+
 	// 2つトークンを読み込み。curTokenとpeekTokenの両方がセット
 	p.nextToken()
 	p.nextToken()
@@ -75,6 +97,7 @@ func (p *Parser) peekError(t mtoken.TokenType) {
 	p.errors = append(p.errors, msg)
 }
 
+// 空白を飛ばしながら、次のトークンを探す
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
 	p.peekToken = p.l.NextToken()
@@ -184,6 +207,18 @@ func (p *Parser) noPrefixParseFnError(t mtoken.TokenType) {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	if prefix, ok := p.prefixParseFns[p.curToken.Type]; ok {
 		leftExp := prefix()
+
+		// この後にnextTokenを呼び出してトークンを1つ進め、それからparseExpressionを再度呼び出してこのノードのRightフィールドを埋める。
+		// このparseExpression呼び出しでは、演算子トークンの優先順位を渡す。
+		// さて、いよいよお披露目だ。ここが私たちのPratt構文解析器の心臓部だ。
+		for !p.peekTokenIs(mtoken.SEMICOLON) && precedence < p.peekPrecedence() {
+			infix := p.infixParseFns[p.peekToken.Type]
+			if infix == nil {
+				return leftExp
+			}
+			p.nextToken()
+			leftExp = infix(leftExp)
+		}
 		return leftExp
 	}
 	p.noPrefixParseFnError(p.curToken.Type)
@@ -223,5 +258,36 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 
 	expression.Right = p.parseExpression(PREFIX)
 
+	return expression
+}
+
+func (p *Parser) peekPrecedence() int {
+	if p, ok := precedence[p.peekToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+func (p *Parser) curPrecedence() int {
+	if p, ok := precedence[p.curToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+// ここで、parsePrefixExpressionとの重要な違いは、
+// この新しいメソッドが引数としてleftという名前のast.Expressionを取ることだ。
+// この引数は*ast.InfixExpressionノードを構築する際に使う。leftをLeftフィールドに格納するんだ。
+// それから現在のトークン（中置演算子式の演算子）の優先順位をローカル変数precedenceに保存する。
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	expression := &ast.InfixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     left,
+	}
+
+	precedence := p.curPrecedence()
+	p.nextToken()
+	expression.Right = p.parseExpression(precedence)
 	return expression
 }
