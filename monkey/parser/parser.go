@@ -186,6 +186,7 @@ func (p *Parser) registerInfix(tokenType mtoken.TokenType, fn infixParseFn) {
 }
 
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	// defer untrace(trace("parseExpressionStatement"))
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 
 	stmt.Expression = p.parseExpression(LOWEST)
@@ -205,6 +206,7 @@ func (p *Parser) noPrefixParseFnError(t mtoken.TokenType) {
 // もし存在していれば、その構文解析関数を呼び出し、その結果を返す。
 // そうでなければnilを返す
 func (p *Parser) parseExpression(precedence int) ast.Expression {
+	// defer untrace(trace("parseExpression"))
 	if prefix, ok := p.prefixParseFns[p.curToken.Type]; ok {
 		leftExp := prefix()
 
@@ -235,6 +237,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 }
 
 func (p *Parser) parseIntegerLiteral() ast.Expression {
+	// defer untrace(trace("parseIntegerLiteral"))
 	lit := &ast.IntegerLiteral{Token: p.curToken}
 
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
@@ -249,6 +252,7 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {
+	// defer untrace(trace("parsePrefixExpression"))
 	expression := &ast.PrefixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
@@ -280,6 +284,7 @@ func (p *Parser) curPrecedence() int {
 // この引数は*ast.InfixExpressionノードを構築する際に使う。leftをLeftフィールドに格納するんだ。
 // それから現在のトークン（中置演算子式の演算子）の優先順位をローカル変数precedenceに保存する。
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	// defer untrace(trace("parseInfixExpression"))
 	expression := &ast.InfixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
